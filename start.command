@@ -7,7 +7,8 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 if [ ! -d .venv ]; then python3 -m venv .venv; fi
-if ! .venv/bin/python -c 'import streamlit, httpx, bs4, keyring, playwright, tzdata' >/dev/null 2>&1; then
+if ! .venv/bin/python -c 'import streamlit, httpx, bs4, keyring, playwright, tzdata, send2trash' >/dev/null 2>&1; then
   .venv/bin/python -m pip install -r requirements.txt
 fi
+.venv/bin/python -m canvas_sync.reminders start
 exec .venv/bin/python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501 --server.showEmailPrompt false --browser.gatherUsageStats false

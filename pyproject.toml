@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "canvas-local-sync"
-version = "0.1.0"
+version = "0.2.0"
 description = "个人本地 Canvas 课程资料同步器"
 requires-python = ">=3.11"
 dependencies = [
-  "streamlit>=1.50,<2", "httpx>=0.27,<1", "beautifulsoup4>=4.12,<5",
+  "streamlit>=1.65,<2", "httpx>=0.27,<1", "beautifulsoup4>=4.12,<5",
   "keyring>=25,<26", "playwright>=1.49,<2", "tzdata>=2024.2",
+  "Send2Trash>=2.1,<3",
 ]
 
 [project.optional-dependencies]

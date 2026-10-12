@@ -4,3 +4,4 @@ beautifulsoup4==4.15.0
 keyring==25.7.0
 playwright==1.63.0
 tzdata==2026.5
+Send2Trash==2.1.0

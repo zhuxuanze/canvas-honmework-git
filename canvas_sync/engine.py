@@ -12,6 +12,7 @@ from .materialize import Materializer
 from .lock import sync_lock
 from .paths import safe_name, sha_file, under
 from .store import now
+from .tasks import Tasks
 
 SOURCE_NAMES = ("Files", "Folders", "Assignments", "Pages", "Modules")
 
@@ -73,6 +74,9 @@ class SyncEngine:
         run = self.store.start_run(self.ns)
         try:
             for course in courses:
+                stored_course = next((c for c in self.store.courses(self.ns) if c["id"] == str(course["id"])), None)
+                if stored_course and stored_course.get("archived"):
+                    continue
                 self.current_course = course["name"]
                 if self.expired:
                     break
@@ -194,6 +198,9 @@ class SyncEngine:
                     note = "Canvas Block Editor 页面暂不支持完整离线渲染，请查看原页面。"
                     self._source(cid, "Pages", "partial", note)
                 file_refs, links = refs(body, self.canvas.base)
+                if kind == "assignment":
+                    Tasks(self.store).canvas(self.ns, cid, {"id": rid, "name": title, "description": body,
+                        "html_url": source, "due_at": document.get("due_at"), "attachments": list(file_refs)})
                 for fid, label in file_refs.items():
                     add_file(fid, label)
                 self.stats["not_downloaded"] += len(links)
@@ -362,15 +369,5 @@ class SyncEngine:
                 "attachments": group["files"], "links": group["links"]})
 
     def _index(self, cid, course, course_dir):
-        resources = self.store.resources(self.ns, cid)
-        sources = self.store.sources(self.ns, cid)
-        rows = []
-        for row in resources:
-            local = row.get("path")
-            href = quote(os.path.relpath(local, self.root / course_dir).replace(os.sep, "/")) if local else row.get("source", "")
-            rows.append(f'<tr><td>{html.escape(row["kind"])}</td><td><a href="{html.escape(href, quote=True)}">{html.escape(row.get("title", ""))}</a></td><td>{html.escape(date_text(row.get("due"), self.tz) if row["kind"] == "assignment" else "")}</td><td>{html.escape(row.get("status", ""))}</td><td>{html.escape(row.get("reason", ""))}</td><td><a href="{html.escape(row.get("source", ""), quote=True)}">Canvas</a></td></tr>')
-        body = "<h2>入口获取情况</h2><ul>" + ''.join(f'<li>{html.escape(s["name"])}：{html.escape(s["status"])} — {html.escape(s["detail"])}</li>' for s in sources) + "</ul><h2>本地资源</h2><table><tr><th>类型</th><th>标题</th><th>截止时间</th><th>状态</th><th>说明</th><th>来源</th></tr>" + ''.join(rows) + "</table>"
-        # 索引是本地生成内容，不通过正文净化器把相对本地链接转成在线链接。
-        payload = f'<!doctype html><html lang="zh"><meta charset="utf-8"><title>课程索引</title><style>body{{font:15px/1.7 system-ui;padding:24px}}td,th{{border:1px solid #ddd;padding:8px}}table{{border-collapse:collapse}}</style><h1>{html.escape(course["name"])}</h1><p>生成时间：{html.escape(date_text(now(), self.tz))}；默认不删除旧资料，远程消失的项目可能仍在本地。</p>{body}</html>'.encode()
-        sha = hashlib.sha256(payload).hexdigest()
-        self.writer.write(f'{cid}:index', course_dir / "课程索引.html", payload, sha, sha)
+        from .index import write_index
+        write_index(self.store, self.ns, cid, course, self.root / course_dir, self.root, self.tz)

@@ -16,3 +16,5 @@ test-results/
 build/
 dist/
 .agents/skills/developing-with-streamlit
+.streamlit/secrets.toml
+reminders.lock
